@@ -1,0 +1,22 @@
+{
+  "aws_project_region": "il-central-1",
+  "aws_cognito_identity_pool_id": "PLACEHOLDER",
+  "aws_cognito_region": "il-central-1",
+  "aws_user_pools_id": "PLACEHOLDER",
+  "aws_user_pools_web_client_id": "PLACEHOLDER",
+  "oauth": {},
+  "aws_cognito_username_attributes": ["email"],
+  "aws_cognito_social_providers": [],
+  "aws_cognito_signup_attributes": ["email"],
+  "aws_cognito_mfa_configuration": "OFF",
+  "aws_cognito_mfa_types": ["SMS"],
+  "aws_cognito_password_protection_settings": {
+    "passwordPolicyMinLength": 8,
+    "passwordPolicyCharacters": []
+  },
+  "aws_cognito_verification_mechanisms": ["email"],
+  "aws_appsync_graphqlEndpoint": "PLACEHOLDER",
+  "aws_appsync_region": "il-central-1",
+  "aws_appsync_authenticationType": "AMAZON_COGNITO_USER_POOLS",
+  "aws_appsync_apiKey": "PLACEHOLDER"
+}
