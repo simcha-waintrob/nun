@@ -44,7 +44,11 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box dir="rtl">
-        <Authenticator>
+        <Authenticator
+          loginMechanisms={['email']}
+          signUpAttributes={['email']}
+          hideSignUp={true}
+        >
           {({ signOut, user }) => (
             <SynagogueProvider>
               <HebrewCalendarProvider>
