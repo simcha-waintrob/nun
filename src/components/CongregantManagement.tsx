@@ -690,6 +690,22 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
     setAddAliyahOpen(false);
   };
 
+  const handleEditAliyah = (aliyah: Aliyah) => {
+    setEditingAliyah(aliyah);
+    setAliyahForm(aliyah);
+    setAddAliyahOpen(true);
+  };
+
+  const handleDeleteAliyah = (aliyahId: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק את העלייה?')) {
+      // In real app, would call API to delete
+      console.log('Delete aliyah:', aliyahId);
+      setSnackbarMessage('העלייה נמחקה בהצלחה');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    }
+  };
+
   // Pledge handlers
   const handleAddPledge = () => {
     setEditingPledge(null);
@@ -758,6 +774,22 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
     setAddPledgeOpen(false);
   };
 
+  const handleEditPledge = (pledge: Pledge) => {
+    setEditingPledge(pledge);
+    setPledgeForm(pledge);
+    setAddPledgeOpen(true);
+  };
+
+  const handleDeletePledge = (pledgeId: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק את ההתחייבות?')) {
+      // In real app, would call API to delete
+      console.log('Delete pledge:', pledgeId);
+      setSnackbarMessage('ההתחייבות נמחקה בהצלחה');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    }
+  };
+
   const getPledgeTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       'KIDDUSH': 'קידוש',
@@ -813,6 +845,7 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
                         <TableCell>סוג עלייה</TableCell>
                         <TableCell>סכום</TableCell>
                         <TableCell>הערות</TableCell>
+                        <TableCell align="center">פעולות</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -823,6 +856,26 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
                           <TableCell>{aliyah.aliyahType}</TableCell>
                           <TableCell>{aliyah.amount ? `₪${aliyah.amount}` : '-'}</TableCell>
                           <TableCell>{aliyah.notes || '-'}</TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                              <IconButton 
+                                onClick={() => handleEditAliyah(aliyah)} 
+                                color="primary" 
+                                size="small"
+                                title="עריכה"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton 
+                                onClick={() => handleDeleteAliyah(aliyah.id)} 
+                                color="error" 
+                                size="small"
+                                title="מחיקה"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -860,6 +913,7 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
                         <TableCell>סכום</TableCell>
                         <TableCell>סטטוס</TableCell>
                         <TableCell>תשלום</TableCell>
+                        <TableCell align="center">פעולות</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -882,6 +936,26 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
                               color={pledge.paymentStatus === 'PAID' ? 'success' : pledge.paymentStatus === 'PARTIAL' ? 'warning' : 'error'}
                               size="small"
                             />
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                              <IconButton 
+                                onClick={() => handleEditPledge(pledge)} 
+                                color="primary" 
+                                size="small"
+                                title="עריכה"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton 
+                                onClick={() => handleDeletePledge(pledge.id)} 
+                                color="error" 
+                                size="small"
+                                title="מחיקה"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
