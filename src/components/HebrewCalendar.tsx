@@ -18,6 +18,7 @@ import {
   ChevronRight
 } from '@mui/icons-material';
 import { HDate, HebrewCalendar as HebcalCalendar, Sedra } from '@hebcal/core';
+import HebrewDateService from '../services/hebrewDateService';
 
 interface HebrewCalendarDay {
   hebrewDate: HDate;
@@ -45,24 +46,10 @@ const HebrewCalendar: React.FC = () => {
   // Debug: Log the initial state
   console.log(`🔧 INITIAL STATE: currentHebrewMonth=${currentHebrewMonth}, currentHebrewYear=${currentHebrewYear}`);
 
-  // Hebrew month names (HDate library order: 1=Nisan, 7=Tishrei)
-  const hebrewMonthNames = [
-    '', // Index 0 - not used
-    'ניסן',   // 1
-    'אייר',   // 2  
-    'סיון',   // 3
-    'תמוז',   // 4
-    'אב',     // 5
-    'אלול',   // 6
-    'תשרי',   // 7
-    'חשון',   // 8
-    'כסלו',   // 9
-    'טבת',    // 10
-    'שבט',    // 11
-    'אדר',    // 12 - Regular year Adar
-    'אדר א׳', // 13 - Adar I in leap year
-    'אדר ב׳'  // 14 - Adar II in leap year
-  ];
+  // Use centralized Hebrew month names
+  const getMonthName = (monthNum: number): string => {
+    return HebrewDateService.getHebrewMonthName(monthNum);
+  };
 
   // Hebrew day names (Sunday to Saturday, RTL)
   const hebrewDayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
@@ -91,14 +78,9 @@ const HebrewCalendar: React.FC = () => {
     }
   };
 
-  // Convert number to Hebrew letters with proper geresh/gershayim
+  // Use centralized service for Hebrew numbers
   const numberToHebrewLetters = (num: number): string => {
-    const hebrewNumbers: { [key: number]: string } = {
-      1: 'א׳', 2: 'ב׳', 3: 'ג׳', 4: 'ד׳', 5: 'ה׳', 6: 'ו׳', 7: 'ז׳', 8: 'ח׳', 9: 'ט׳',
-      10: 'י׳', 11: 'י״א', 12: 'י״ב', 13: 'י״ג', 14: 'י״ד', 15: 'ט״ו', 16: 'ט״ז', 17: 'י״ז', 18: 'י״ח', 19: 'י״ט',
-      20: 'כ׳', 21: 'כ״א', 22: 'כ״ב', 23: 'כ״ג', 24: 'כ״ד', 25: 'כ״ה', 26: 'כ״ו', 27: 'כ״ז', 28: 'כ״ח', 29: 'כ״ט', 30: 'ל׳'
-    };
-    return hebrewNumbers[num] || num.toString();
+    return HebrewDateService.dayToGematria(num);
   };
 
   // Get holidays using HDate library only - no hardcoded dates
@@ -386,7 +368,7 @@ const HebrewCalendar: React.FC = () => {
         if (day <= 3) {
           console.log(`📅 DATE DEBUG (day ${day}):`);
           console.log(`  Current Hebrew Month/Year: ${currentHebrewMonth}/${currentHebrewYear}`);
-          console.log(`  Month Name from Array: ${hebrewMonthNames[currentHebrewMonth]}`);
+          console.log(`  Month Name from Array: ${getMonthName(currentHebrewMonth)}`);
           console.log(`  Hebrew Date Input: ${day}/${currentHebrewMonth}/${currentHebrewYear}`);
           console.log(`  HDate object created: ${hdate.toString()}`);
           console.log(`  Gregorian Date Result: ${gregorianDate.toISOString().split('T')[0]}`);
@@ -398,7 +380,7 @@ const HebrewCalendar: React.FC = () => {
           hebrewDate: hdate,
           gregorianDate,
           hebrewDay: day,
-          hebrewMonth: hdate.getMonthName() || hebrewMonthNames[currentHebrewMonth],
+          hebrewMonth: hdate.getMonthName() || getMonthName(currentHebrewMonth),
           hebrewYear: currentHebrewYear,
           gregorianDay: gregorianDate.getDate(),
           gregorianMonth: gregorianDate.getMonth() + 1,
@@ -465,7 +447,7 @@ const HebrewCalendar: React.FC = () => {
           hebrewDate: prevHDate,
           gregorianDate: prevGregorianDate,
           hebrewDay: prevHebrewDay,
-          hebrewMonth: hebrewMonthNames[prevHebrewMonth] || 'אלול',
+          hebrewMonth: getMonthName(prevHebrewMonth) || 'אלול',
           hebrewYear: prevHebrewYear,
           gregorianDay: prevGregorianDate.getDate(),
           gregorianMonth: prevGregorianDate.getMonth() + 1,
@@ -638,7 +620,7 @@ const HebrewCalendar: React.FC = () => {
             {(() => {
               // Get current month name from HDate to handle Adar I/II correctly
               const currentHDate = new HDate(1, currentHebrewMonth, currentHebrewYear);
-              const monthName = currentHDate.getMonthName() || hebrewMonthNames[currentHebrewMonth];
+              const monthName = currentHDate.getMonthName() || getMonthName(currentHebrewMonth);
               console.log(`🗓️ HEADER DEBUG: currentHebrewMonth=${currentHebrewMonth}, monthName=${monthName}`);
               return `${monthName} ${currentHebrewYear}`;
             })()}
@@ -686,7 +668,7 @@ const HebrewCalendar: React.FC = () => {
                 // Add regular months (1-12)
                 for (let i = 1; i <= 12; i++) {
                   const hdate = new HDate(1, i, currentHebrewYear);
-                  const monthName = hdate.getMonthName() || hebrewMonthNames[i];
+                  const monthName = hdate.getMonthName() || getMonthName(i);
                   months.push(
                     <MenuItem key={i} value={i}>{monthName}</MenuItem>
                   );
@@ -696,7 +678,7 @@ const HebrewCalendar: React.FC = () => {
                 try {
                   const adarII = new HDate(1, 13, currentHebrewYear);
                   if (adarII.getMonth() === 13) {
-                    const monthName = adarII.getMonthName() || hebrewMonthNames[13];
+                    const monthName = adarII.getMonthName() || getMonthName(13);
                     months.push(
                       <MenuItem key={13} value={13}>{monthName}</MenuItem>
                     );

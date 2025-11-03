@@ -12,9 +12,12 @@ import CongregantManagement from './components/CongregantManagement';
 import EventManagement from './components/EventManagement';
 import PaymentManagement from './components/PaymentManagement';
 import Reports from './components/Reports';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import Navigation from './components/Navigation';
 import { HebrewCalendarProvider } from './contexts/HebrewCalendarContext';
 import { SynagogueProvider } from './contexts/SynagogueContext';
+import { AdminProvider, useAdmin, UserRole } from './contexts/AdminContext';
 
 Amplify.configure(amplifyconfig);
 
@@ -39,6 +42,35 @@ const theme = createTheme({
   },
 });
 
+// Role-based routing component
+const AppRoutes: React.FC = () => {
+  const { userRole } = useAdmin();
+
+  return (
+    <Routes>
+      {/* Super Admin Routes */}
+      {userRole === UserRole.SUPER_ADMIN && (
+        <>
+          <Route path="/super-admin" element={<SuperAdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+        </>
+      )}
+      
+      {/* Admin Routes */}
+      {(userRole === UserRole.ADMIN || userRole === UserRole.SUPER_ADMIN) && (
+        <Route path="/admin" element={<AdminDashboard />} />
+      )}
+      
+      {/* Regular User Routes */}
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/congregants" element={<CongregantManagement />} />
+      <Route path="/events" element={<EventManagement />} />
+      <Route path="/payments" element={<PaymentManagement />} />
+      <Route path="/reports" element={<Reports />} />
+    </Routes>
+  );
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -50,22 +82,18 @@ function App() {
           hideSignUp={true}
         >
           {({ signOut, user }) => (
-            <SynagogueProvider>
-              <HebrewCalendarProvider>
-                <Router>
-                  <Navigation signOut={signOut} user={user} />
-                  <Box component="main" sx={{ p: 3, mt: 8 }}>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/congregants" element={<CongregantManagement />} />
-                      <Route path="/events" element={<EventManagement />} />
-                      <Route path="/payments" element={<PaymentManagement />} />
-                      <Route path="/reports" element={<Reports />} />
-                    </Routes>
-                  </Box>
-                </Router>
-              </HebrewCalendarProvider>
-            </SynagogueProvider>
+            <AdminProvider>
+              <SynagogueProvider>
+                <HebrewCalendarProvider>
+                  <Router>
+                    <Navigation signOut={signOut} user={user} />
+                    <Box component="main" sx={{ p: 3, mt: 8 }}>
+                      <AppRoutes />
+                    </Box>
+                  </Router>
+                </HebrewCalendarProvider>
+              </SynagogueProvider>
+            </AdminProvider>
           )}
         </Authenticator>
       </Box>

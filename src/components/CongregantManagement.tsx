@@ -185,7 +185,7 @@ const CongregantManagement: React.FC = () => {
         <DialogTitle>
           {editingCongregant ? 'עריכת מתפלל' : 'הוספת מתפלל חדש'}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 5, pb: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
               label="שם פרטי"

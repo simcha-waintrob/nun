@@ -10,7 +10,8 @@ import {
   ListItem,
   ListItemText,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Avatar
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleIcon from '@mui/icons-material/People';
@@ -18,10 +19,15 @@ import EventIcon from '@mui/icons-material/Event';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { useSynagogue } from '../contexts/SynagogueContext';
 import { useHebrewCalendar } from '../contexts/HebrewCalendarContext';
+import { useAdmin } from '../contexts/AdminContext';
 
 const Dashboard: React.FC = () => {
   const { currentSynagogue } = useSynagogue();
   const { currentHebrewYear, events, loading } = useHebrewCalendar();
+  const { synagogues } = useAdmin();
+  
+  // Get current synagogue data with logo
+  const currentSynagogueData = synagogues.find(s => s.id === currentSynagogue?.id);
 
   // Mock data for demonstration
   const stats = {
@@ -54,13 +60,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        דשבורד - {currentSynagogue?.name}
-      </Typography>
-      
-      <Typography variant="h6" color="text.secondary" gutterBottom>
-        שנת {currentHebrewYear?.yearLabel}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        {currentSynagogueData?.logoUrl && (
+          <Avatar
+            src={currentSynagogueData.logoUrl}
+            alt={currentSynagogueData.hebrewName}
+            sx={{ width: 64, height: 64, mr: 3 }}
+          />
+        )}
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            דשבורד - {currentSynagogue?.name}
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            שנת {currentHebrewYear?.yearLabel}
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
