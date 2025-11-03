@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -21,25 +21,102 @@ import {
   Select,
   MenuItem,
   Chip,
-  Fab
+  Fab,
+  Grid,
+  InputAdornment,
+  Tabs,
+  Tab,
+  Autocomplete,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ViewIcon from '@mui/icons-material/Visibility';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import AccountBoxIcon from '@mui/icons-material/AccountBox';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import { useSynagogue } from '../contexts/SynagogueContext';
+import { getParshiotForSelect } from '../utils/parshiot';
+import HebrewDatePicker from './HebrewDatePicker';
+import HebrewDateService from '../services/hebrewDateService';
+
+interface Address {
+  street: string;
+  houseNumber: string;
+  apartmentNumber?: string;
+  city: string;
+  postalCode?: string;
+}
+
+// Torah Aliyah types
+interface Aliyah {
+  id: string;
+  congregantId: string;
+  date: string; // Hebrew date
+  gregorianDate: string;
+  parasha: string;
+  aliyahNumber?: number;
+  aliyahType: string;
+  amount?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+// Pledge types
+interface Pledge {
+  id: string;
+  congregantId: string;
+  type: 'KIDDUSH' | 'SEUDA_SHLISHIT' | 'YAHRZEIT' | 'SIMCHA' | 'GENERAL';
+  title: string;
+  description?: string;
+  date: string;
+  gregorianDate: string;
+  amount: number;
+  status: 'PENDING' | 'FULFILLED' | 'CANCELLED';
+  paymentStatus: 'UNPAID' | 'PARTIAL' | 'PAID';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Purchase types
+interface Purchase {
+  id: string;
+  congregantId: string;
+  type: 'SEFER_TORAH' | 'MEZUZAH' | 'TEFILLIN' | 'TALLIT' | 'SIDDUR' | 'PAROCHET' | 'OTHER';
+  title: string;
+  description?: string;
+  amount: number;
+  date: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  notes?: string;
+  createdAt: string;
+}
 
 interface Congregant {
   id: string;
   firstName: string;
   lastName: string;
-  phone?: string;
+  fatherName?: string;
+  identityNumber?: string;
+  phone: string;
+  secondaryPhone?: string;
   email?: string;
+  address?: Address;
   status: 'ACTIVE' | 'INACTIVE';
   familyUnitId?: string;
   notes?: string;
 }
 
 const CongregantManagement: React.FC = () => {
+  const { currentSynagogue } = useSynagogue();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCongregant, setSelectedCongregant] = useState<Congregant | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  
   const [congregants, setCongregants] = useState<Congregant[]>([
     {
       id: '1',
@@ -66,13 +143,28 @@ const CongregantManagement: React.FC = () => {
     }
   ]);
 
+  // Mock data for aliyot, pledges, purchases
+  const [aliyot, setAliyot] = useState<Aliyah[]>([]);
+  const [pledges, setPledges] = useState<Pledge[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+
   const [open, setOpen] = useState(false);
   const [editingCongregant, setEditingCongregant] = useState<Congregant | null>(null);
   const [formData, setFormData] = useState<Partial<Congregant>>({
     firstName: '',
     lastName: '',
+    fatherName: '',
+    identityNumber: '',
     phone: '',
+    secondaryPhone: '',
     email: '',
+    address: {
+      street: '',
+      houseNumber: '',
+      apartmentNumber: '',
+      city: '',
+      postalCode: ''
+    },
     status: 'ACTIVE',
     notes: ''
   });
