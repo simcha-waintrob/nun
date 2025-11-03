@@ -555,19 +555,401 @@ interface CongregantDetailsDialogProps {
 const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
   open,
   onClose,
-  congregant
+  congregant,
+  aliyot,
+  pledges,
+  purchases,
+  onAddAliyah,
+  onAddPledge,
+  onAddPurchase
 }) => {
+  const [tabValue, setTabValue] = useState(0);
+  const [addAliyahOpen, setAddAliyahOpen] = useState(false);
+  const [addPledgeOpen, setAddPledgeOpen] = useState(false);
+  const [addPurchaseOpen, setAddPurchaseOpen] = useState(false);
+  const [editingAliyah, setEditingAliyah] = useState<Aliyah | null>(null);
+  const [editingPledge, setEditingPledge] = useState<Pledge | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  
+  // Snackbar for validation
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'error' | 'success' | 'warning'>('error');
+  
+  // Get today's dates
+  const getTodayDates = () => {
+    const today = new Date();
+    const hebrewDate = HebrewDateService.gregorianToHebrew(today);
+    const gregorianDateStr = today.toISOString().split('T')[0];
+    const hebrewDateStr = HebrewDateService.formatHebrewDate(hebrewDate.day, hebrewDate.month, hebrewDate.year);
+    
+    return {
+      hebrewDate: hebrewDateStr,
+      gregorianDate: gregorianDateStr
+    };
+  };
+  
+  // Form states
+  const [aliyahForm, setAliyahForm] = useState<Partial<Aliyah>>(() => {
+    const todayDates = getTodayDates();
+    return {
+      date: todayDates.hebrewDate,
+      gregorianDate: todayDates.gregorianDate,
+      parasha: '',
+      aliyahNumber: 1,
+      aliyahType: '',
+      amount: 0,
+      notes: ''
+    };
+  });
+  
+  const [pledgeForm, setPledgeForm] = useState<Partial<Pledge>>(() => {
+    const todayDates = getTodayDates();
+    return {
+      type: 'KIDDUSH',
+      title: '',
+      description: '',
+      date: todayDates.hebrewDate,
+      gregorianDate: todayDates.gregorianDate,
+      amount: 0,
+      status: 'PENDING',
+      paymentStatus: 'UNPAID',
+      notes: ''
+    };
+  });
+  
+  const [purchaseForm, setPurchaseForm] = useState<Partial<Purchase>>({
+    type: 'SEFER_TORAH',
+    title: '',
+    description: '',
+    amount: 0,
+    date: '',
+    status: 'ACTIVE',
+    notes: ''
+  });
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  // Aliyah handlers
+  const handleAddAliyah = () => {
+    setEditingAliyah(null);
+    const todayDates = getTodayDates();
+    setAliyahForm({
+      date: todayDates.hebrewDate,
+      gregorianDate: todayDates.gregorianDate,
+      parasha: '',
+      aliyahNumber: 1,
+      aliyahType: '',
+      amount: 0,
+      notes: ''
+    });
+    setAddAliyahOpen(true);
+  };
+
+  const handleSaveAliyah = () => {
+    // Validation
+    if (!aliyahForm.date || !aliyahForm.gregorianDate) {
+      setSnackbarMessage('נא למלא תאריך');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (!aliyahForm.parasha) {
+      setSnackbarMessage('נא לבחור פרשה');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (!aliyahForm.aliyahType) {
+      setSnackbarMessage('נא לבחור סוג עלייה');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (editingAliyah) {
+      console.log('Update aliyah:', editingAliyah.id, aliyahForm);
+      setSnackbarMessage('העלייה עודכנה בהצלחה');
+      setSnackbarSeverity('success');
+    } else {
+      const newAliyah: Aliyah = {
+        ...aliyahForm as Aliyah,
+        id: Date.now().toString(),
+        congregantId: congregant.id,
+        createdAt: new Date().toISOString()
+      };
+      onAddAliyah(newAliyah);
+      setSnackbarMessage('העלייה נוספה בהצלחה');
+      setSnackbarSeverity('success');
+    }
+    setSnackbarOpen(true);
+    setAddAliyahOpen(false);
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth dir="rtl">
-      <DialogTitle>
-        {`${congregant.firstName} ${congregant.lastName}`}
+      <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AccountBoxIcon />
+          <Typography variant="h6">
+            {`${congregant.firstName} ${congregant.lastName}`}
+          </Typography>
+        </Box>
       </DialogTitle>
-      <DialogContent>
-        <Typography>פרטי מתפלל - בשלב פיתוח...</Typography>
+      <DialogContent sx={{ p: 0 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label={`עליות (${aliyot.length})`} />
+          <Tab label={`התחייבויות (${pledges.length})`} />
+          <Tab label={`קניות (${purchases.length})`} />
+        </Tabs>
+        
+        <Box sx={{ p: 3 }}>
+          {/* Aliyot Tab */}
+          {tabValue === 0 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6">עליות לתורה</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddAliyah}
+                  size="small"
+                >
+                  הוסף עלייה
+                </Button>
+              </Box>
+              {aliyot.length === 0 ? (
+                <Typography color="text.secondary">אין עליות רשומות</Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>תאריך</TableCell>
+                        <TableCell>פרשה</TableCell>
+                        <TableCell>סוג עלייה</TableCell>
+                        <TableCell>סכום</TableCell>
+                        <TableCell>הערות</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {aliyot.map((aliyah) => (
+                        <TableRow key={aliyah.id}>
+                          <TableCell>{aliyah.date}</TableCell>
+                          <TableCell>{aliyah.parasha}</TableCell>
+                          <TableCell>{aliyah.aliyahType}</TableCell>
+                          <TableCell>{aliyah.amount ? `₪${aliyah.amount}` : '-'}</TableCell>
+                          <TableCell>{aliyah.notes || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
+          )}
+          
+          {/* Pledges Tab */}
+          {tabValue === 1 && <Typography>התחייבויות - בשלב פיתוח...</Typography>}
+          
+          {/* Purchases Tab */}
+          {tabValue === 2 && <Typography>קניות - בשלב פיתוח...</Typography>}
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>סגור</Button>
       </DialogActions>
+      
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+          dir="rtl"
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      
+      {/* Add/Edit Aliyah Dialog */}
+      <Dialog 
+        open={addAliyahOpen} 
+        onClose={() => setAddAliyahOpen(false)} 
+        maxWidth="md" 
+        fullWidth 
+        dir="rtl"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          py: 2.5,
+          fontSize: '1.25rem',
+          fontWeight: 600
+        }}>
+          {editingAliyah ? '✏️ עריכת עלייה' : '➕ הוספת עלייה חדשה'}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 4, pb: 2 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <HebrewDatePicker
+                value={{
+                  hebrewDate: aliyahForm.date || '',
+                  gregorianDate: aliyahForm.gregorianDate || ''
+                }}
+                onChange={(dates) => setAliyahForm(prev => ({
+                  ...prev,
+                  date: dates.hebrewDate,
+                  gregorianDate: dates.gregorianDate
+                }))}
+                label="תאריך"
+                required
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Autocomplete
+                options={getParshiotForSelect().map(p => p.label)}
+                value={aliyahForm.parasha || ''}
+                onChange={(e, newValue) => setAliyahForm(prev => ({ ...prev, parasha: newValue || '' }))}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="📖 פרשה"
+                    required
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Autocomplete
+                options={[
+                  'כהן',
+                  'לוי',
+                  'שלישי',
+                  'רביעי',
+                  'חמישי',
+                  'שישי',
+                  'שביעי',
+                  'מפטיר',
+                  'הוספה א',
+                  'הוספה ב',
+                  'הוספה ג',
+                  'הגבהה',
+                  'גלילה',
+                  'ראשון',
+                  'שני'
+                ]}
+                value={aliyahForm.aliyahType || ''}
+                onChange={(e, newValue) => setAliyahForm(prev => ({ ...prev, aliyahType: newValue || '' }))}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="🎯 סוג עלייה"
+                    required
+                    variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="💰 סכום תרומה (אופציונלי)"
+                type="number"
+                value={aliyahForm.amount || ''}
+                onChange={(e) => setAliyahForm(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+                fullWidth
+                inputProps={{ min: 0 }}
+                placeholder="הזן סכום בש״ח"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="📝 הערות (אופציונלי)"
+                value={aliyahForm.notes || ''}
+                onChange={(e) => setAliyahForm(prev => ({ ...prev, notes: e.target.value }))}
+                multiline
+                rows={3}
+                fullWidth
+                placeholder="הערות נוספות..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'grey.50' }}>
+          <Button 
+            onClick={() => setAddAliyahOpen(false)}
+            variant="outlined"
+            sx={{ 
+              minWidth: 100,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '1rem'
+            }}
+          >
+            ביטול
+          </Button>
+          <Button 
+            onClick={handleSaveAliyah} 
+            variant="contained"
+            sx={{ 
+              minWidth: 100,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '1rem',
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
+          >
+            {editingAliyah ? '✅ עדכן' : '➕ הוסף'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
