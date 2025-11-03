@@ -690,6 +690,85 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
     setAddAliyahOpen(false);
   };
 
+  // Pledge handlers
+  const handleAddPledge = () => {
+    setEditingPledge(null);
+    const todayDates = getTodayDates();
+    setPledgeForm({
+      type: 'KIDDUSH',
+      title: '',
+      description: '',
+      date: todayDates.hebrewDate,
+      gregorianDate: todayDates.gregorianDate,
+      amount: 0,
+      status: 'PENDING',
+      paymentStatus: 'UNPAID',
+      notes: ''
+    });
+    setAddPledgeOpen(true);
+  };
+
+  const handleSavePledge = () => {
+    // Validation
+    if (!pledgeForm.type) {
+      setSnackbarMessage('נא לבחור סוג התחייבות');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (!pledgeForm.amount || pledgeForm.amount <= 0) {
+      setSnackbarMessage('נא להזין סכום תקין');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (!pledgeForm.title || pledgeForm.title.trim() === '') {
+      setSnackbarMessage('נא למלא כותרת');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (!pledgeForm.date || !pledgeForm.gregorianDate) {
+      setSnackbarMessage('נא למלא תאריך');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    if (editingPledge) {
+      console.log('Update pledge:', editingPledge.id, pledgeForm);
+      setSnackbarMessage('ההתחייבות עודכנה בהצלחה');
+      setSnackbarSeverity('success');
+    } else {
+      const newPledge: Pledge = {
+        ...pledgeForm as Pledge,
+        id: Date.now().toString(),
+        congregantId: congregant.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      onAddPledge(newPledge);
+      setSnackbarMessage('ההתחייבות נוספה בהצלחה');
+      setSnackbarSeverity('success');
+    }
+    setSnackbarOpen(true);
+    setAddPledgeOpen(false);
+  };
+
+  const getPledgeTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'KIDDUSH': 'קידוש',
+      'SEUDA_SHLISHIT': 'סעודה שלישית',
+      'YAHRZEIT': 'יארצייט',
+      'SIMCHA': 'שמחה',
+      'GENERAL': 'כללי'
+    };
+    return labels[type] || type;
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth dir="rtl">
       <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 2 }}>
@@ -754,7 +833,64 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
           )}
           
           {/* Pledges Tab */}
-          {tabValue === 1 && <Typography>התחייבויות - בשלב פיתוח...</Typography>}
+          {tabValue === 1 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6">התחייבויות</Typography>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddPledge}
+                  size="small"
+                >
+                  הוסף התחייבות
+                </Button>
+              </Box>
+              {pledges.length === 0 ? (
+                <Typography color="text.secondary">אין התחייבויות רשומות</Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>תאריך</TableCell>
+                        <TableCell>סוג</TableCell>
+                        <TableCell>כותרת</TableCell>
+                        <TableCell>סכום</TableCell>
+                        <TableCell>סטטוס</TableCell>
+                        <TableCell>תשלום</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {pledges.map((pledge) => (
+                        <TableRow key={pledge.id}>
+                          <TableCell>{pledge.date}</TableCell>
+                          <TableCell>{getPledgeTypeLabel(pledge.type)}</TableCell>
+                          <TableCell>{pledge.title}</TableCell>
+                          <TableCell>₪{pledge.amount}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={pledge.status === 'FULFILLED' ? 'בוצע' : pledge.status === 'PENDING' ? 'ממתין' : 'בוטל'} 
+                              color={pledge.status === 'FULFILLED' ? 'success' : pledge.status === 'PENDING' ? 'warning' : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={pledge.paymentStatus === 'PAID' ? 'שולם' : pledge.paymentStatus === 'PARTIAL' ? 'חלקי' : 'לא שולם'} 
+                              color={pledge.paymentStatus === 'PAID' ? 'success' : pledge.paymentStatus === 'PARTIAL' ? 'warning' : 'error'}
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
+          )}
           
           {/* Purchases Tab */}
           {tabValue === 2 && <Typography>קניות - בשלב פיתוח...</Typography>}
@@ -947,6 +1083,174 @@ const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
             }}
           >
             {editingAliyah ? '✅ עדכן' : '➕ הוסף'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Add/Edit Pledge Dialog */}
+      <Dialog 
+        open={addPledgeOpen} 
+        onClose={() => setAddPledgeOpen(false)} 
+        maxWidth="md" 
+        fullWidth 
+        dir="rtl"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: 'success.main', 
+          color: 'white',
+          py: 2.5,
+          fontSize: '1.25rem',
+          fontWeight: 600
+        }}>
+          {editingPledge ? '✏️ עריכת התחייבות' : '➕ הוספת התחייבות חדשה'}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 4, pb: 2 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>🎯 סוג התחייבות</InputLabel>
+                <Select
+                  value={pledgeForm.type || 'KIDDUSH'}
+                  onChange={(e) => setPledgeForm(prev => ({ ...prev, type: e.target.value as any }))}
+                  label="🎯 סוג התחייבות"
+                  sx={{
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <MenuItem value="KIDDUSH">🍷 קידוש</MenuItem>
+                  <MenuItem value="SEUDA_SHLISHIT">🍽️ סעודה שלישית</MenuItem>
+                  <MenuItem value="YAHRZEIT">🕯️ יארצייט</MenuItem>
+                  <MenuItem value="SIMCHA">🎉 שמחה</MenuItem>
+                  <MenuItem value="GENERAL">📋 כללי</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="💰 סכום"
+                type="number"
+                value={pledgeForm.amount || ''}
+                onChange={(e) => setPledgeForm(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
+                fullWidth
+                required
+                inputProps={{ min: 0 }}
+                placeholder="הזן סכום בש״ח"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="📌 כותרת"
+                value={pledgeForm.title || ''}
+                onChange={(e) => setPledgeForm(prev => ({ ...prev, title: e.target.value }))}
+                fullWidth
+                required
+                placeholder="לדוגמה: קידוש לכבוד בר מצווה"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <HebrewDatePicker
+                value={{
+                  hebrewDate: pledgeForm.date || '',
+                  gregorianDate: pledgeForm.gregorianDate || ''
+                }}
+                onChange={(dates) => setPledgeForm(prev => ({
+                  ...prev,
+                  date: dates.hebrewDate,
+                  gregorianDate: dates.gregorianDate
+                }))}
+                label="תאריך"
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="📄 תיאור (אופציונלי)"
+                value={pledgeForm.description || ''}
+                onChange={(e) => setPledgeForm(prev => ({ ...prev, description: e.target.value }))}
+                multiline
+                rows={3}
+                fullWidth
+                placeholder="פרטים נוספים על ההתחייבות..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="📝 הערות (אופציונלי)"
+                value={pledgeForm.notes || ''}
+                onChange={(e) => setPledgeForm(prev => ({ ...prev, notes: e.target.value }))}
+                multiline
+                rows={2}
+                fullWidth
+                placeholder="הערות נוספות..."
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'grey.50' }}>
+          <Button 
+            onClick={() => setAddPledgeOpen(false)}
+            variant="outlined"
+            sx={{ 
+              minWidth: 100,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '1rem'
+            }}
+          >
+            ביטול
+          </Button>
+          <Button 
+            onClick={handleSavePledge} 
+            variant="contained"
+            color="success"
+            sx={{ 
+              minWidth: 100,
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '1rem',
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
+          >
+            {editingPledge ? '✅ עדכן' : '➕ הוסף'}
           </Button>
         </DialogActions>
       </Dialog>
