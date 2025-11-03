@@ -169,6 +169,19 @@ const CongregantManagement: React.FC = () => {
     notes: ''
   });
 
+  // Search filter
+  const filteredCongregants = useMemo(() => {
+    if (!searchTerm) return congregants;
+    
+    const term = searchTerm.toLowerCase();
+    return congregants.filter(c => 
+      c.firstName.toLowerCase().includes(term) ||
+      c.lastName.toLowerCase().includes(term) ||
+      c.phone?.includes(term) ||
+      c.email?.toLowerCase().includes(term)
+    );
+  }, [congregants, searchTerm]);
+
   const handleOpen = (congregant?: Congregant) => {
     if (congregant) {
       setEditingCongregant(congregant);
@@ -178,8 +191,18 @@ const CongregantManagement: React.FC = () => {
       setFormData({
         firstName: '',
         lastName: '',
+        fatherName: '',
+        identityNumber: '',
         phone: '',
+        secondaryPhone: '',
         email: '',
+        address: {
+          street: '',
+          houseNumber: '',
+          apartmentNumber: '',
+          city: '',
+          postalCode: ''
+        },
         status: 'ACTIVE',
         notes: ''
       });
@@ -211,13 +234,33 @@ const CongregantManagement: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    setCongregants(prev => prev.filter(c => c.id !== id));
+    if (window.confirm('האם אתה בטוח שברצונך למחוק את המתפלל?')) {
+      setCongregants(prev => prev.filter(c => c.id !== id));
+    }
+  };
+
+  const handleViewDetails = (congregant: Congregant) => {
+    setSelectedCongregant(congregant);
+    setDetailsOpen(true);
+  };
+
+  const handleAddAliyah = (aliyah: Aliyah) => {
+    setAliyot(prev => [...prev, aliyah]);
+  };
+
+  const handleAddPledge = (pledge: Pledge) => {
+    setPledges(prev => [...prev, pledge]);
+  };
+
+  const handleAddPurchase = (purchase: Purchase) => {
+    setPurchases(prev => [...prev, purchase]);
   };
 
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
+          <AccountBoxIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
           ניהול מתפללים
         </Typography>
         <Button
@@ -225,28 +268,59 @@ const CongregantManagement: React.FC = () => {
           startIcon={<AddIcon />}
           onClick={() => handleOpen()}
         >
-          הוסף מתפלל חדש
+          הוסף מתפלל
         </Button>
       </Box>
+
+      <TextField
+        fullWidth
+        placeholder="חיפוש לפי שם, טלפון או אימייל..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        sx={{ mb: 3 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+          endAdornment: searchTerm && (
+            <InputAdornment position="end">
+              <IconButton onClick={() => setSearchTerm('')} size="small">
+                <ClearIcon />
+              </IconButton>
+            </InputAdornment>
+          )
+        }}
+      />
 
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>שם פרטי</TableCell>
-              <TableCell>שם משפחה</TableCell>
+              <TableCell>שם</TableCell>
               <TableCell>טלפון</TableCell>
               <TableCell>אימייל</TableCell>
               <TableCell>סטטוס</TableCell>
-              <TableCell>פעולות</TableCell>
+              <TableCell align="center">פעולות</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {congregants.map((congregant) => (
+            {filteredCongregants.map((congregant) => (
               <TableRow key={congregant.id}>
-                <TableCell>{congregant.firstName}</TableCell>
-                <TableCell>{congregant.lastName}</TableCell>
-                <TableCell>{congregant.phone || '-'}</TableCell>
+                <TableCell>{`${congregant.firstName} ${congregant.lastName}`}</TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {congregant.phone || '-'}
+                    </Typography>
+                    {congregant.secondaryPhone && (
+                      <Typography variant="caption" color="text.secondary">
+                        {congregant.secondaryPhone}
+                      </Typography>
+                    )}
+                  </Box>
+                </TableCell>
                 <TableCell>{congregant.email || '-'}</TableCell>
                 <TableCell>
                   <Chip
@@ -255,16 +329,33 @@ const CongregantManagement: React.FC = () => {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpen(congregant)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(congregant.id)} color="error">
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton color="info">
-                    <ViewIcon />
-                  </IconButton>
+                <TableCell align="center">
+                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                    <IconButton 
+                      onClick={() => handleViewDetails(congregant)} 
+                      color="info" 
+                      size="small"
+                      title="צפייה בפרטים"
+                    >
+                      <ViewIcon />
+                    </IconButton>
+                    <IconButton 
+                      onClick={() => handleOpen(congregant)} 
+                      color="primary" 
+                      size="small"
+                      title="עריכה"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      onClick={() => handleDelete(congregant.id)} 
+                      color="error" 
+                      size="small"
+                      title="מחיקה"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}
@@ -273,59 +364,154 @@ const CongregantManagement: React.FC = () => {
       </TableContainer>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth dir="rtl">
         <DialogTitle>
           {editingCongregant ? 'עריכת מתפלל' : 'הוספת מתפלל חדש'}
         </DialogTitle>
-        <DialogContent sx={{ pt: 5, pb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="שם פרטי"
-              value={formData.firstName || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-              fullWidth
-              required
-            />
-            <TextField
-              label="שם משפחה"
-              value={formData.lastName || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-              fullWidth
-              required
-            />
-            <TextField
-              label="טלפון"
-              value={formData.phone || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              fullWidth
-            />
-            <TextField
-              label="אימייל"
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>סטטוס</InputLabel>
-              <Select
-                value={formData.status || 'ACTIVE'}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
-                label="סטטוס"
-              >
-                <MenuItem value="ACTIVE">פעיל</MenuItem>
-                <MenuItem value="INACTIVE">לא פעיל</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label="הערות"
-              value={formData.notes || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              multiline
-              rows={3}
-              fullWidth
-            />
-          </Box>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="שם פרטי"
+                value={formData.firstName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="שם משפחה"
+                value={formData.lastName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="שם האב"
+                value={formData.fatherName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, fatherName: e.target.value }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="תעודת זהות"
+                value={formData.identityNumber || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, identityNumber: e.target.value }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="טלפון ראשי"
+                value={formData.phone || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="טלפון נוסף"
+                value={formData.secondaryPhone || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, secondaryPhone: e.target.value }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="אימייל"
+                type="email"
+                value={formData.email || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>כתובת מגורים</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="רחוב"
+                value={formData.address?.street || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address!, street: e.target.value }
+                }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                label="מספר בית"
+                value={formData.address?.houseNumber || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address!, houseNumber: e.target.value }
+                }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                label="דירה"
+                value={formData.address?.apartmentNumber || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address!, apartmentNumber: e.target.value }
+                }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="עיר"
+                value={formData.address?.city || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address!, city: e.target.value }
+                }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="מיקוד"
+                value={formData.address?.postalCode || ''}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  address: { ...prev.address!, postalCode: e.target.value }
+                }))}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>סטטוס</InputLabel>
+                <Select
+                  value={formData.status || 'ACTIVE'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'ACTIVE' | 'INACTIVE' }))}
+                  label="סטטוס"
+                >
+                  <MenuItem value="ACTIVE">פעיל</MenuItem>
+                  <MenuItem value="INACTIVE">לא פעיל</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="הערות"
+                value={formData.notes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                multiline
+                rows={3}
+                fullWidth
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>ביטול</Button>
@@ -334,7 +520,55 @@ const CongregantManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Congregant Details Dialog */}
+      {selectedCongregant && (
+        <CongregantDetailsDialog
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          congregant={selectedCongregant}
+          aliyot={aliyot.filter(a => a.congregantId === selectedCongregant.id)}
+          pledges={pledges.filter(p => p.congregantId === selectedCongregant.id)}
+          purchases={purchases.filter(p => p.congregantId === selectedCongregant.id)}
+          onAddAliyah={handleAddAliyah}
+          onAddPledge={handleAddPledge}
+          onAddPurchase={handleAddPurchase}
+        />
+      )}
     </Box>
+  );
+};
+
+// Congregant Details Dialog Component - Will be implemented in next step
+interface CongregantDetailsDialogProps {
+  open: boolean;
+  onClose: () => void;
+  congregant: Congregant;
+  aliyot: Aliyah[];
+  pledges: Pledge[];
+  purchases: Purchase[];
+  onAddAliyah: (aliyah: Aliyah) => void;
+  onAddPledge: (pledge: Pledge) => void;
+  onAddPurchase: (purchase: Purchase) => void;
+}
+
+const CongregantDetailsDialog: React.FC<CongregantDetailsDialogProps> = ({
+  open,
+  onClose,
+  congregant
+}) => {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth dir="rtl">
+      <DialogTitle>
+        {`${congregant.firstName} ${congregant.lastName}`}
+      </DialogTitle>
+      <DialogContent>
+        <Typography>פרטי מתפלל - בשלב פיתוח...</Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>סגור</Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
